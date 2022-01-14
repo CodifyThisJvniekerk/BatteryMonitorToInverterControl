@@ -1,8 +1,9 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
-# SharpDevelop 4.4
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestApp", "TestApp\TestApp.csproj", "{89EFB6C2-9ED0-45DA-8C19-00B43FEDF46D}"
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32014.148
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LBSA_Axpert_Commander", "TestApp\LBSA_Axpert_Commander.csproj", "{89EFB6C2-9ED0-45DA-8C19-00B43FEDF46D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -10,9 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{89EFB6C2-9ED0-45DA-8C19-00B43FEDF46D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{89EFB6C2-9ED0-45DA-8C19-00B43FEDF46D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{89EFB6C2-9ED0-45DA-8C19-00B43FEDF46D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{89EFB6C2-9ED0-45DA-8C19-00B43FEDF46D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{89EFB6C2-9ED0-45DA-8C19-00B43FEDF46D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{89EFB6C2-9ED0-45DA-8C19-00B43FEDF46D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A9A79142-CF11-4468-BA17-6B7B1151371A}
 	EndGlobalSection
 EndGlobal
