@@ -1,3 +1,5 @@
-If the TestApplication.exe won't run right click on this file (in the project folder), choose Properties, check the "Unblock" check box at the bottom of the dialog box and press Apply and OK. After this rebuild the project.
-
-After running this application check the log file located in the same folder as the executable (Debug or Release).
+This code is primarily for my own personal use.
+The use case is there exist a tool to monitor the LBSA Battery on a windows machine.
+But the inverter axpert (Kodak OG 5.48) does not support CAN BUS 2 that the battery comunicates in.
+So this is to play the middle man with a windows PC since the back to grid voltage can't be set high enough to not discharge the battery under 20% state of charge.
+It will force back to grid by means of changing the Output source priority to SUB for stop discharge and SBU for discharge battery. 
