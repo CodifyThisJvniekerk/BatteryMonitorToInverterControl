@@ -20,12 +20,12 @@ namespace TestApp
 		{
 			Engine engine = new Engine();
 			
-            int procId = engine.StartProcess("C:/Users/bbdnet1522/Desktop/BattaryMonitor V2.1.8 End User/BattaryMonitor V2.1.8 End User/BattaryMonitor.exe");
+            int procId = engine.StartProcess($"{Directory.GetCurrentDirectory()}\\BattaryMonitor.exe");
             UIDA_Window mainWindow = engine.GetTopLevelByProcId(procId, "Battery Monitor V2.1.8");
             foreach(var button in mainWindow.Buttons("Connect", searchDescendants: true))
             {
                 button.Invoke();
-                button.WaitForInputIdle(1500);
+                button.WaitForInputIdle(1000);
             }
             decimal soc = 0m;
             decimal current = 0m;
@@ -34,6 +34,7 @@ namespace TestApp
               {
                   while (true)
                   {
+                      Thread.Sleep(1000);
                       List<string> values = new List<string>();
                       int index = 0;
                       foreach (var label in mainWindow.TabCtrls()[0].TabItems()[0].Labels(searchDescendants: true))
@@ -54,61 +55,98 @@ namespace TestApp
                       }
                     }
               });
-            int PVVoltage = 0;
-            int PVWatage = 0;
-            int ACLoad = 0;
+            decimal PVVoltage = 0;
+            decimal PVWatage = 0;
+            decimal ACLoad = 0;
+            string dataRaw = string.Empty;
             _ = Task.Factory.StartNew(() =>
             {
                 while (true)
                 {
-                    string data = GetInverterStats();
+                    Thread.Sleep(1000);
+                    string data = GetStatsViaThirdParty();
                     if (data.Length == 0)
                     {
                         return;
                     }
-                    if(data.Contains(" "))
-                    {
-                        var info = data.Split(' ');
-                        PVVoltage = int.Parse(info[13]);
-                        PVWatage = int.Parse(info[19]);
-                        ACLoad = int.Parse(info[5]);
-                    }
+                    dataRaw = data;
+                    var info = data.Split(' ');
+                    PVVoltage = decimal.Parse(info[13]);
+                    PVWatage = decimal.Parse(info[19]);
+                    ACLoad = decimal.Parse(info[5]);
                 }
             });
             bool UsingEskom = false;
+            int loopcounter = 0;
+            Thread.Sleep(2000);
             while (true)
             {
-                Thread.Sleep(1000);
-                Console.Clear();
+                if(loopcounter > 59)
+                {
+                    Console.Clear();
+                    loopcounter = 0;
+                }
+                ++loopcounter;
+                Thread.Sleep(3000);
                 Console.WriteLine($"SOC : {soc}%");
                 Console.WriteLine($"Current : {current}A");
                 Console.WriteLine($"Status : {state}");
                 Console.WriteLine($"Inverter PV Input Wattage: {PVWatage}");
                 Console.WriteLine($"Inverter AC Load: {ACLoad}");
                 Console.WriteLine($"Inverter PV Voltage: {PVVoltage}");
-                if(soc < 20.5m && !UsingEskom)
+                Console.WriteLine($"Inverter full response: {dataRaw}");
+                if(soc <= 20.5m && !UsingEskom)
                 {
                     UsingEskom = true;
                     SwitchToUtility();
                     Console.WriteLine($"Back to Grid at {DateTime.Now}");
+                    File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Back to Grid at {DateTime.Now} \n");
                 }
                 if(soc < 35 && UsingEskom)
                 {
                     UsingEskom = false;
                     SwitchToBackToBattery();
                     Console.WriteLine($"Back to Grid at {DateTime.Now}");
+                    File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Back to Battery {DateTime.Now} \n");
                 }
             }
         }
 
         private static void SwitchToBackToBattery()
         {
-            ExecuteInverterCommand("QPOP02", "COM1", 2400);
+            CreateAxpertTestProcess("-p COM1 QPOP01").Start();
+            //ExecuteInverterCommand("QPOP02", "COM1", 2400);
         }
 
         private static void SwitchToUtility()
         {
-            ExecuteInverterCommand("QPOP01", "COM1", 2400);
+            CreateAxpertTestProcess(" -p COM1 QPOP01").Start();
+            //ExecuteInverterCommand("QPOP01", "COM1", 2400);
+        }
+
+        public static Process CreateAxpertTestProcess(string arguments)
+        {
+            return new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = $"{Directory.GetCurrentDirectory()}\\AxpertTest.exe",
+                    Arguments = " -p COM1 QPIGS",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
+        }
+
+        private static string GetStatsViaThirdParty()
+        {
+            var proccess = CreateAxpertTestProcess(" -p COM1 QPIGS");
+            proccess.Start();
+            var response = proccess.StandardOutput.ReadToEnd();
+            proccess.WaitForExit();
+            return response;
         }
 
         private static string GetInverterStats()
