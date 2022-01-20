@@ -59,6 +59,10 @@ namespace TestApp
             decimal PVWatage = 0;
             decimal ACLoad = 0;
             string dataRaw = string.Empty;
+            decimal[] perminutepv = new decimal[60];
+            decimal TotalMinutePVWattage = 0;
+            int statloopcount = 0;
+            int minuteCount = 0;
             _ = Task.Factory.StartNew(() =>
             {
                 while (true)
@@ -73,7 +77,24 @@ namespace TestApp
                     var info = data.Split(' ');
                     PVVoltage = decimal.Parse(info[13]);
                     PVWatage = decimal.Parse(info[19]);
+                    TotalMinutePVWattage += PVWatage;
                     ACLoad = decimal.Parse(info[5]);
+                    if (statloopcount == 60)
+                    {
+                        perminutepv[minuteCount] = TotalMinutePVWattage / 60;
+                        ++minuteCount;
+                        if (minuteCount == 59)
+                        {
+                            decimal totalforhour = 0;
+                            foreach (var minuteaverage in perminutepv)
+                            {
+                                totalforhour += minuteaverage;
+                            }
+                            File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Total watts for hour {DateTime.Now} {(totalforhour / 60)} \n");
+                            minuteCount = 0;
+                        }
+                    }
+                    ++statloopcount;
                 }
             });
             bool UsingEskom = false;
@@ -95,18 +116,18 @@ namespace TestApp
                 Console.WriteLine($"Inverter AC Load: {ACLoad}");
                 Console.WriteLine($"Inverter PV Voltage: {PVVoltage}");
                 Console.WriteLine($"Inverter full response: {dataRaw}");
-                if(soc <= 20.5m && !UsingEskom)
+                if(soc <= 20.5m && !UsingEskom && soc!=0)
                 {
                     UsingEskom = true;
                     SwitchToUtility();
                     Console.WriteLine($"Back to Grid at {DateTime.Now}");
                     File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Back to Grid at {DateTime.Now} \n");
                 }
-                if(soc < 35 && UsingEskom)
+                else if(soc > 35 && UsingEskom && soc != 0)
                 {
                     UsingEskom = false;
                     SwitchToBackToBattery();
-                    Console.WriteLine($"Back to Grid at {DateTime.Now}");
+                    Console.WriteLine($"Back to Battery at {DateTime.Now}");
                     File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Back to Battery {DateTime.Now} \n");
                 }
             }
@@ -114,13 +135,13 @@ namespace TestApp
 
         private static void SwitchToBackToBattery()
         {
-            CreateAxpertTestProcess("-p COM1 QPOP01").Start();
+            CreateAxpertTestProcess(" -p COM1 QPOP01").Start();
             //ExecuteInverterCommand("QPOP02", "COM1", 2400);
         }
 
         private static void SwitchToUtility()
         {
-            CreateAxpertTestProcess(" -p COM1 QPOP01").Start();
+            CreateAxpertTestProcess(" -p COM1 QPOP02").Start();
             //ExecuteInverterCommand("QPOP01", "COM1", 2400);
         }
 
