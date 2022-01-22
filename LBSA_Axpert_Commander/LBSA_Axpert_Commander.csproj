@@ -51,23 +51,18 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="UIDeskAutomation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\UIDeskAutomation.1.6.3\lib\UIDeskAutomation.dll</HintPath>
+      <HintPath>..\packages\UIDeskAutomation.1.6.4\lib\UIDeskAutomation.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="InverterComander.cs" />
+    <Compile Include="InverterStat.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="UIDeskAutomation">
-      <Version>1.6.3</Version>
-    </PackageReference>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>copy "$(ProjectDir)TestApplication.exe" "$(ProjectDir)$(OutDir)"</PostBuildEvent>
-  </PropertyGroup>
 </Project>
