@@ -6,30 +6,101 @@ namespace InverterControlLibrary
     public class InverterComander
     {
         private bool _gotResponse;
-        private MemoryStream? _rxBuffer = new MemoryStream();
+        private MemoryStream _rxBuffer = new MemoryStream();
         private SerialPort ComPort { get; set; }
-        public string GetInverterStats(string port)
+        public bool TryGetInverterStats(string port,out InverterStat inverterStat, out string stats, out string error)
         {
-            if (TryInnitialize(port))
+            stats = string.Empty;
+            error = string.Empty;
+            inverterStat = null;
+            try
             {
-                ExecuteInverterCommand("QPIGS");
-                if(TryGetResponse(out var data))
+                if (TryInnitialize(port, out var information, out var errormessage))
                 {
-                    return data;
+                    ExecuteInverterCommand("QPIGS");
+                    if (TryGetResponse(out var data, out var errorDataRetrieval))
+                    {
+                        stats = data.ToString();
+                        inverterStat = new InverterStat(stats);
+                        return true;
+                    }
+                    else
+                    {
+                        error = errorDataRetrieval.ToString();
+                        return false;
+                    }
+                }
+                else
+                {
+                    error = errormessage;
+                    return false;
                 }
             }
-            return string.Empty;
+            finally
+            {
+                ComPort.Close();
+                _gotResponse = false;
+            }
         }
 
-        private bool TryGetResponse(out string result)
+        public string ChangeToSolarUtilityBattery(string portName)
+        {
+            try
+            {
+                if (TryInnitialize(portName, out var Successindicator, out var errormessage))
+                {
+                    ExecuteInverterCommand("POP01");
+                    if (TryGetResponse(out var data, out var errorResponse))
+                    {
+                        return data;
+                    }
+                    else
+                    {
+                        return errorResponse;
+                    }
+                }
+                else
+                {
+                    return errormessage;
+                }
+            }
+            finally
+            {
+                ComPort.Close();
+                _gotResponse = false;
+            }
+        }
+
+        public string ChangeToSolarBatteryUtility(string portName)
+        {
+            try
+            {
+                if (TryInnitialize(portName, out var Successindicator, out string error))
+                {
+                    ExecuteInverterCommand("POP02");
+                    if (TryGetResponse(out var data, out string responseerror))
+                    {
+                        return data;
+                    }
+                }
+                return Successindicator;
+            }
+            finally
+            {
+                ComPort.Close();
+                _gotResponse = false;
+            }
+        }
+
+        private bool TryGetResponse(out string result, out string error)
         {
             result = string.Empty;
+            error = string.Empty;
             if (!_gotResponse)
+            {
+                error = "Inverter did not respond";
                 return false;
-
-            if (_rxBuffer.Length < 3)
-                return false;
-
+            }
             byte[] payloadBytes = new byte[_rxBuffer.Length - 3];
             Array.Copy(_rxBuffer.GetBuffer(), payloadBytes, payloadBytes.Length);
 
@@ -39,25 +110,34 @@ namespace InverterControlLibrary
             ushort calculatedCrc = CalculateCrc(payloadBytes);
             ushort receivedCrc = (ushort)((crcMsb << 8) | crcLsb);
             if (calculatedCrc != receivedCrc)
+            {
+                error = "Wrong response";
                 return false;
-
+            }
             //Write response to console
             result = Encoding.ASCII.GetString(payloadBytes);
+            _rxBuffer.Close();
+            _rxBuffer = new MemoryStream();
             return true;
         }
-        private bool TryInnitialize(string portName, int buad = 2400)
+        private bool TryInnitialize(string portName, out string information, out string error, int buad = 2400)
         {
-            if (ComPort != null && ComPort.IsOpen)
-            {
-                return true;
-            }
-            else if (ComPort != null && !ComPort.IsOpen)
-            {
-                ComPort.Open();
-                return true;
-            }
+            error = "";
+            information = "success";
             try
             {
+                if (ComPort != null && ComPort.IsOpen)
+                {
+                    error += "Port Already Open";
+                    return true;
+                }
+                else if (ComPort != null && !ComPort.IsOpen)
+                {
+                    information += "ReOpening Port";
+                    ComPort.Open();
+                    return true;
+                }
+                information += "Innitialize Port";
                 ComPort = new SerialPort();
                 ComPort.PortName = portName;
                 ComPort.BaudRate = buad;
@@ -69,8 +149,9 @@ namespace InverterControlLibrary
                 ComPort.ErrorReceived += new SerialErrorReceivedEventHandler(DataErrorReceivedHandler);
                 ComPort.Open();
             }
-            catch
+            catch (Exception x)
             {
+                error = x.ToString();
                 return false;
             }
             return true;

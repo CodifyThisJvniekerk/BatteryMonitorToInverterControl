@@ -8,14 +8,25 @@
         Title="MainWindow" Height="450" Width="800">
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="20" />
+            <RowDefinition Height="20" />
+            <RowDefinition Height="20" />
             <RowDefinition />
+            <RowDefinition Height="20" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition/>
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
         <TextBlock Text="Com Port" Grid.Row="0" Grid.Column="0"/>
-        <TextBox x:Name="comport" Text="COM1"/>
-
+        <TextBox x:Name="comport" Text="COM1" Grid.Column="1"/>
+        <Button x:Name="GetStats" Grid.Row="1" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="GetStats_Click" Content="Get Inverter Stats"/>
+        <TextBlock x:Name="Test" Text="{Binding InverterResponse}" Grid.Column="1" Grid.Row="1" Foreground="Green"/>
+        <Button x:Name="ChangeToGrid" Grid.Row="2" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="ChangeToGrid_Click"  Content="Back to Grid"/>
+        <Button x:Name="ChangeToSolarBattery" Grid.Row="3" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="ChangeToSolarBatteryUtility_Click" Content="Back To Solar"/>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2">
+            <TextBlock Text="{Binding CommandResponse}" Foreground="Red" />
+        </StackPanel>
     </Grid>
+    
 </Window>

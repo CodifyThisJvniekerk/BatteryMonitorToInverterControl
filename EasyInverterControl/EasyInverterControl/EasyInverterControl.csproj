@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.IO.Ports" Version="6.0.0" />
+    <ProjectReference Include="..\InverterControlLibrary\InverterControlLibrary.csproj" />
   </ItemGroup>
 
 </Project>
