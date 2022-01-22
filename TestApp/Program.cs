@@ -10,139 +10,155 @@ using UIDeskAutomationLib;
 
 namespace TestApp
 {
-	class Program
-	{
+    class Program
+    {
         private static bool _gotResponse;
         static MemoryStream _rxBuffer = new MemoryStream();
-        private string AxpertResponse;
 
         public static void Main(string[] args)
-		{
-			Engine engine = new Engine();
-			
-            int procId = engine.StartProcess($"{Directory.GetCurrentDirectory()}\\BattaryMonitor.exe");
-            UIDA_Window mainWindow = engine.GetTopLevelByProcId(procId, "Battery Monitor V2.1.8");
-            foreach(var button in mainWindow.Buttons("Connect", searchDescendants: true))
+        {
+            try
             {
-                button.Invoke();
-                button.WaitForInputIdle(1000);
-            }
-            decimal soc = 0m;
-            decimal current = 0m;
-            string state = "";
-            _ = Task.Factory.StartNew(() =>
-              {
-                  while (true)
+                Engine engine = new Engine();
+
+                int procId = engine.StartProcess($"{Directory.GetCurrentDirectory()}\\BattaryMonitor.exe");
+                UIDA_Window mainWindow = engine.GetTopLevelByProcId(procId, "Battery Monitor V2.1.8");
+                foreach (var button in mainWindow.Buttons("Connect", searchDescendants: true))
+                {
+                    button.Invoke();
+                    button.WaitForInputIdle(1000);
+                }
+                decimal soc = 0m;
+                decimal current = 0m;
+                string state = "";
+                OpenSerialPort("COM1");
+                _ = Task.Factory.StartNew(() =>
                   {
-                      Thread.Sleep(1000);
-                      List<string> values = new List<string>();
-                      int index = 0;
-                      foreach (var label in mainWindow.TabCtrls()[0].TabItems()[0].Labels(searchDescendants: true))
+                      while (true)
                       {
-                          ++index;
-                          if (index == 4)
+                          Thread.Sleep(1000);
+                          List<string> values = new List<string>();
+                          int index = 0;
+                          foreach (var label in mainWindow.TabCtrls()[0].TabItems()[0].Labels(searchDescendants: true))
                           {
-                              current = decimal.Parse(label.Text.Replace("A", ""));
-                          }else if (index == 6)
-                          {
-                              soc = decimal.Parse(label.GetText().Replace("%", ""));
-                          }
-                          else if (index == 8)
-                          {
-                              state = label.GetText();
-                              break;
+                              ++index;
+                              if (index == 4)
+                              {
+                                  current = decimal.Parse(label.Text.Replace("A", ""));
+                              }
+                              else if (index == 6)
+                              {
+                                  soc = decimal.Parse(label.GetText().Replace("%", ""));
+                              }
+                              else if (index == 8)
+                              {
+                                  state = label.GetText();
+                                  break;
+                              }
                           }
                       }
+                  });
+                decimal PVVoltage = 0;
+                decimal PVWatage = 0;
+                decimal ACLoad = 0;
+                string dataRaw = string.Empty;
+                decimal[] perminutepv = new decimal[60];
+                decimal TotalMinutePVWattage = 0;
+                int statloopcount = 0;
+                int minuteCount = 0;
+                _ = Task.Factory.StartNew(() =>
+                {
+                    while (true)
+                    {
+                        Thread.Sleep(1000);
+                        ExecuteInverterCommand("QPIGS", "COM1", 2400);
+                        if (!TryGetResponse(out var data))
+                        {
+                            data = "Oops error";
+                        }
+                        dataRaw = data;
+                        var info = data.Split(' ');
+                        PVVoltage = decimal.Parse(info[13]);
+                        PVWatage = decimal.Parse(info[info.Length -2]);
+                        TotalMinutePVWattage += PVWatage;
+                        ACLoad = decimal.Parse(info[5]);
+                        if (statloopcount == 60)
+                        {
+                            if(TotalMinutePVWattage != 0)
+                            {
+                                perminutepv[minuteCount] = TotalMinutePVWattage / 60;
+                            }
+                            else
+                            {
+                                perminutepv[minuteCount] = 0m;
+                            }
+                            if (minuteCount == 59)
+                            {
+                                decimal totalforhour = 0;
+                                foreach (var minuteaverage in perminutepv)
+                                {
+                                    totalforhour += minuteaverage;
+                                }
+                                if (totalforhour > 0)
+                                {
+                                    File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Total watts for hour {DateTime.Now} {(totalforhour / 60)} \n");
+                                }
+                                minuteCount = 0;
+                            }
+                            ++minuteCount;
+                        }
+                        ++statloopcount;
                     }
-              });
-            decimal PVVoltage = 0;
-            decimal PVWatage = 0;
-            decimal ACLoad = 0;
-            string dataRaw = string.Empty;
-            decimal[] perminutepv = new decimal[60];
-            decimal TotalMinutePVWattage = 0;
-            int statloopcount = 0;
-            int minuteCount = 0;
-            _ = Task.Factory.StartNew(() =>
-            {
+                });
+                bool UsingEskom = false;
+                int loopcounter = 0;
+                Thread.Sleep(2000);
                 while (true)
                 {
-                    Thread.Sleep(1000);
-                    string data = GetStatsViaThirdParty();
-                    if (data.Length == 0)
+                    if (loopcounter > 59)
                     {
-                        return;
+                        Console.Clear();
+                        loopcounter = 0;
                     }
-                    dataRaw = data;
-                    var info = data.Split(' ');
-                    PVVoltage = decimal.Parse(info[13]);
-                    PVWatage = decimal.Parse(info[19]);
-                    TotalMinutePVWattage += PVWatage;
-                    ACLoad = decimal.Parse(info[5]);
-                    if (statloopcount == 60)
+                    ++loopcounter;
+                    Thread.Sleep(3000);
+                    Console.WriteLine($"SOC : {soc}%");
+                    Console.WriteLine($"Current : {current}A");
+                    Console.WriteLine($"Status : {state}");
+                    Console.WriteLine($"Inverter PV Input Wattage: {PVWatage}");
+                    Console.WriteLine($"Inverter AC Load: {ACLoad}");
+                    Console.WriteLine($"Inverter PV Voltage: {PVVoltage}");
+                    Console.WriteLine($"Inverter full response: {dataRaw}");
+                    if (soc <= 20.5m && !UsingEskom && soc != 0)
                     {
-                        perminutepv[minuteCount] = TotalMinutePVWattage / 60;
-                        ++minuteCount;
-                        if (minuteCount == 59)
-                        {
-                            decimal totalforhour = 0;
-                            foreach (var minuteaverage in perminutepv)
-                            {
-                                totalforhour += minuteaverage;
-                            }
-                            File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Total watts for hour {DateTime.Now} {(totalforhour / 60)} \n");
-                            minuteCount = 0;
-                        }
+                        UsingEskom = true;
+                        SwitchToUtility();
+                        Console.WriteLine($"Back to Grid at {DateTime.Now}");
+                        File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Back to Grid at {DateTime.Now} \n");
                     }
-                    ++statloopcount;
+                    else if (soc > 35 && UsingEskom && soc != 0)
+                    {
+                        UsingEskom = false;
+                        SwitchToBackToBattery();
+                        Console.WriteLine($"Back to Battery at {DateTime.Now}");
+                        File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Back to Battery {DateTime.Now} \n");
+                    }
                 }
-            });
-            bool UsingEskom = false;
-            int loopcounter = 0;
-            Thread.Sleep(2000);
-            while (true)
+            }
+            finally
             {
-                if(loopcounter > 59)
-                {
-                    Console.Clear();
-                    loopcounter = 0;
-                }
-                ++loopcounter;
-                Thread.Sleep(3000);
-                Console.WriteLine($"SOC : {soc}%");
-                Console.WriteLine($"Current : {current}A");
-                Console.WriteLine($"Status : {state}");
-                Console.WriteLine($"Inverter PV Input Wattage: {PVWatage}");
-                Console.WriteLine($"Inverter AC Load: {ACLoad}");
-                Console.WriteLine($"Inverter PV Voltage: {PVVoltage}");
-                Console.WriteLine($"Inverter full response: {dataRaw}");
-                if(soc <= 20.5m && !UsingEskom && soc!=0)
-                {
-                    UsingEskom = true;
-                    SwitchToUtility();
-                    Console.WriteLine($"Back to Grid at {DateTime.Now}");
-                    File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Back to Grid at {DateTime.Now} \n");
-                }
-                else if(soc > 35 && UsingEskom && soc != 0)
-                {
-                    UsingEskom = false;
-                    SwitchToBackToBattery();
-                    Console.WriteLine($"Back to Battery at {DateTime.Now}");
-                    File.AppendAllText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt", $"Back to Battery {DateTime.Now} \n");
-                }
+                CloseInverterCommandPort();
             }
         }
 
         private static void SwitchToBackToBattery()
         {
-            CreateAxpertTestProcess(" -p COM1 QPOP01").Start();
-            //ExecuteInverterCommand("QPOP02", "COM1", 2400);
+            ExecuteInverterCommand("QPOP02", "COM1", 2400);
         }
 
         private static void SwitchToUtility()
         {
-            CreateAxpertTestProcess(" -p COM1 QPOP02").Start();
-            //ExecuteInverterCommand("QPOP01", "COM1", 2400);
+            ExecuteInverterCommand("QPOP01", "COM1", 2400);
         }
 
         public static Process CreateAxpertTestProcess(string arguments)
@@ -161,34 +177,12 @@ namespace TestApp
             };
         }
 
-        private static string GetStatsViaThirdParty()
-        {
-            var proccess = CreateAxpertTestProcess(" -p COM1 QPIGS");
-            proccess.Start();
-            var response = proccess.StandardOutput.ReadToEnd();
-            proccess.WaitForExit();
-            return response;
-        }
-
-        private static string GetInverterStats()
-        {
-            ExecuteInverterCommand("QPIGS", "COM1", 2400);
-            if(!TryGetResponse(out var AxpertResponse))
-            {
-                Console.WriteLine("Inverter did not respond");
-            };
-            return AxpertResponse;
-        }
-
         private static bool TryGetResponse(out string result)
         {
             result = string.Empty;
             if (!_gotResponse)
                 return false;
-
-            if (_rxBuffer.Length < 3)
-                return false;
-
+            _gotResponse = false;
             byte[] payloadBytes = new byte[_rxBuffer.Length - 3];
             Array.Copy(_rxBuffer.GetBuffer(), payloadBytes, payloadBytes.Length);
 
@@ -204,37 +198,54 @@ namespace TestApp
             result = Encoding.ASCII.GetString(payloadBytes);
             return true;
         }
+        public static SerialPort InverterPort { get; set; }
 
-        public static void ExecuteInverterCommand(string commandText, string cpmPortName, int baud)
+        public static void OpenSerialPort(string cmpComPortName, int baud = 2400)
         {
-            SerialPort sp = new SerialPort();
-            sp.PortName = cpmPortName;
-            sp.BaudRate = baud;
-            sp.DataBits = 8;
-            sp.Parity = Parity.None;
-            sp.StopBits = StopBits.One;
+            InverterPort = new SerialPort();
+            InverterPort.PortName = cmpComPortName;
+            InverterPort.BaudRate = baud;
+            InverterPort.DataBits = 8;
+            InverterPort.Parity = Parity.None;
+            InverterPort.StopBits = StopBits.One;
 
-            sp.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
-            sp.ErrorReceived += new SerialErrorReceivedEventHandler(DataErrorReceivedHandler);
+            InverterPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+            InverterPort.ErrorReceived += new SerialErrorReceivedEventHandler(DataErrorReceivedHandler);
 
-            sp.Open();
+            InverterPort.Open();
+        }
 
-            byte[] commandBytes = GetMessageBytes(commandText);
+        public static byte[] CreateInverterCommand(string commandText)
+        {
+            return GetMessageBytes(commandText);
+        }
 
+        public static void ExecuteAndAwaitInverterResponse(byte[] inverterCommand)
+        {
             //Flush out any existing chars
-            sp.ReadExisting();
+            InverterPort.ReadExisting();
 
             //Send request
-            sp.Write(commandBytes, 0, commandBytes.Length);
+            InverterPort.Write(inverterCommand, 0, inverterCommand.Length);
 
             //Wait for response
             var startTime = DateTime.Now;
             while (!_gotResponse && ((DateTime.Now - startTime).TotalMilliseconds < 1000))
             {
-                Thread.Sleep(20);
+                Thread.Sleep(200);
             }
+        }
 
-            sp.Close();
+        public static void CloseInverterCommandPort()
+        {
+            InverterPort.Close();
+        }
+
+        public static void ExecuteInverterCommand(string commandText, string cpmPortName, int baud)
+        {
+            _gotResponse = false;
+            var commandBytes = CreateInverterCommand(commandText);
+            ExecuteAndAwaitInverterResponse(commandBytes);
         }
 
         /// <summary>
