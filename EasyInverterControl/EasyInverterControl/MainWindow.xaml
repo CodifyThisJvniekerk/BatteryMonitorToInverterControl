@@ -3,11 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:dv="clr-namespace:System.Windows.Controls.DataVisualization.Charting;assembly=DotNetProjects.DataVisualization.Toolkit"
         xmlns:local="clr-namespace:EasyInverterControl"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="20" />
+            <RowDefinition Height="20" />
             <RowDefinition Height="20" />
             <RowDefinition Height="20" />
             <RowDefinition Height="20" />
@@ -24,7 +27,16 @@
         <TextBlock x:Name="Test" Text="{Binding InverterResponse}" Grid.Column="1" Grid.Row="1" Foreground="Green"/>
         <Button x:Name="ChangeToGrid" Grid.Row="2" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="ChangeToGrid_Click"  Content="Back to Grid"/>
         <Button x:Name="ChangeToSolarBattery" Grid.Row="3" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="ChangeToSolarBatteryUtility_Click" Content="Back To Solar"/>
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Grid.Column="0" Grid.Row="4" Grid.ColumnSpan="2">
+        <CheckBox x:Name="cbShowWattageGraph" Checked="CheckBox_Checked" Unchecked="cbShowWattageGraph_Unchecked" Content="Show live PV Watage chart" Grid.Row="4"/>
+        <dv:Chart x:Name="Wattage" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Visibility="{Binding PVWattageChartVisible}">
+            <dv:Chart.Series>
+                <dv:LineSeries Title="Solar Wattage" ItemsSource="{Binding PVWattages}"
+      IndependentValueBinding="{Binding Path=Time}"  
+      DependentValueBinding="{Binding Path=Wattage}">
+                </dv:LineSeries>
+            </dv:Chart.Series>
+        </dv:Chart>
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="2">
             <TextBlock Text="{Binding CommandResponse}" Foreground="Red" />
         </StackPanel>
     </Grid>

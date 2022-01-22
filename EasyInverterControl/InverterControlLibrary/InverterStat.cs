@@ -26,6 +26,7 @@ namespace InverterControlLibrary
                 BatteryCapacity = decimal.Parse(proccessdata[10]);
                 InverterHeatSinkTemperature = decimal.Parse(proccessdata[11]);
                 SolarInputCurrentForBattery = decimal.Parse(proccessdata[12]);
+                PVWattage = decimal.Parse(proccessdata[19]);
             }
         }
 
@@ -42,5 +43,6 @@ namespace InverterControlLibrary
         public decimal BatteryCapacity { get; }
         public decimal InverterHeatSinkTemperature { get; }
         public decimal SolarInputCurrentForBattery { get; }
+        public decimal PVWattage { get; }
     }
 }
