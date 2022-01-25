@@ -119,10 +119,19 @@ namespace InverterControlLibrary
             }
             //Write response to console
             result = Encoding.ASCII.GetString(payloadBytes);
-            _rxBuffer.Close();
-            _rxBuffer = new MemoryStream();
+            ClearMemoryStream();
             return true;
         }
+
+        private void ClearMemoryStream()
+        {
+            var buffer = _rxBuffer.GetBuffer();
+            Array.Clear(buffer, 0, buffer.Length);
+            _rxBuffer.Position = 0;
+            _rxBuffer.SetLength(0);
+            _rxBuffer.Capacity = 0;
+        }
+
         private bool TryInnitialize(string portName, out string information, out string error, int buad = 2400)
         {
             error = "";
