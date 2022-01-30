@@ -116,7 +116,6 @@ namespace InverterControlLibrary
             }
             //Write response to console
             result = Encoding.ASCII.GetString(payloadBytes);
-            ClearMemoryStream();
             return true;
         }
 
@@ -177,6 +176,7 @@ namespace InverterControlLibrary
 
         private void ExecuteAndAwaitInverterResponse(byte[] commandBytes)
         {
+            ClearMemoryStream();
             //Flush out any existing chars
             ComPort.ReadExisting();
 

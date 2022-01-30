@@ -28,7 +28,7 @@ namespace TestApp
                 }
                 else
                 {
-                    _proccessid = engine.StartProcess($"{Directory.GetCurrentDirectory()}\\BattaryMonitor.exe");
+                    _proccessid = engine.StartProcessAndWaitForInputIdle($"{Directory.GetCurrentDirectory()}\\BattaryMonitor.exe");
                 }
                 UIDA_Window mainWindow = engine.GetTopLevelByProcId(_proccessid, "Battery Monitor V2.1.8");
                 foreach (var button in mainWindow.Buttons("Connect", searchDescendants: true))
@@ -43,7 +43,7 @@ namespace TestApp
                   {
                       while (true)
                       {
-                          Thread.Sleep(1000);
+                          ;
                           List<string> values = new List<string>();
                           int index = 0;
                           foreach (var label in mainWindow.TabCtrls()[0].TabItems()[0].Labels(searchDescendants: true))
@@ -65,27 +65,8 @@ namespace TestApp
                           }
                       }
                   });
-                decimal PVVoltage = 0;
-                decimal PVWatage = 0;
-                decimal ACLoad = 0;
-                string dataRaw = string.Empty;
-                _ = Task.Factory.StartNew(() =>
-                {
-                    while (true)
-                    {
-                        Thread.Sleep(1000);
-                        if(InverterComander.TryGetInverterStats("COM1", out var inverterStat, out string stats, out string error))
-                        {
-                            PVVoltage = inverterStat.PVVoltage;
-                            PVWatage = inverterStat.PVWattage;
-                            ACLoad = inverterStat.OutputActivePower;
-                            dataRaw = stats;
-                        }
-                    }
-                });
                 bool UsingEskom = false;
                 int loopcounter = 0;
-                Thread.Sleep(2000);
                 while (true)
                 {
                     if (loopcounter > 59)
@@ -98,10 +79,6 @@ namespace TestApp
                     Console.WriteLine($"SOC : {soc}%");
                     Console.WriteLine($"Current : {current}A");
                     Console.WriteLine($"Status : {state}");
-                    Console.WriteLine($"Inverter PV Input Wattage: {PVWatage}");
-                    Console.WriteLine($"Inverter AC Load: {ACLoad}");
-                    Console.WriteLine($"Inverter PV Voltage: {PVVoltage}");
-                    Console.WriteLine($"Inverter full response: {dataRaw}");
                     if (soc < 25m && !UsingEskom && soc != 0)
                     {
                         UsingEskom = true;
