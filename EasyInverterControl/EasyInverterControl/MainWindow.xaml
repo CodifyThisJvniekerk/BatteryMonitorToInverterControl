@@ -14,6 +14,7 @@
             <RowDefinition Height="20" />
             <RowDefinition Height="20" />
             <RowDefinition Height="20" />
+            <RowDefinition Height="20"/>
             <RowDefinition />
             <RowDefinition Height="20" />
         </Grid.RowDefinitions>
@@ -22,7 +23,7 @@
             <ColumnDefinition/>
         </Grid.ColumnDefinitions>
         <TextBlock Text="Com Port" Grid.Row="0" Grid.Column="0"/>
-        <TextBox x:Name="comport" Text="COM1" Grid.Column="1"/>
+        <ComboBox Name="comport" Grid.Row="0" Grid.Column="1"/>
         <Button x:Name="GetStats" Grid.Row="1" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="GetStats_Click" Content="Get Inverter Stats"/>
         <TextBlock x:Name="Test" Text="{Binding InverterResponse}" Grid.Column="1" Grid.Row="1" Foreground="Green"/>
         <Button x:Name="ChangeToGrid" Grid.Row="2" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="ChangeToGrid_Click"  Content="Back to Grid"/>
@@ -36,6 +37,49 @@
                 </dv:LineSeries>
             </dv:Chart.Series>
         </dv:Chart>
+        <Grid Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Heighest Wattage In Session"/>
+            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding HighestPVWattage}"/>
+        </Grid>
+        <Grid DataContext="{Binding Stats, Mode=OneWay}" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="PV Wattage" Grid.Column="0" Grid.Row="0"></TextBlock>
+            <TextBlock Text="{Binding PVWattage}" Grid.Column="1" Grid.Row="0"></TextBlock>
+            <TextBlock Text="AC OutPut" Grid.Column="0" Grid.Row="1"></TextBlock>
+            <TextBlock Text="{Binding OutputActivePower}" Grid.Column="1" Grid.Row="1"></TextBlock>
+            <TextBlock Text="OutPut Percentage" Grid.Column="0" Grid.Row="2"></TextBlock>
+            <TextBlock Text="{Binding OutputLoadPercent, StringFormat=0}" Grid.Column="1" Grid.Row="2"></TextBlock>
+            <TextBlock Text="DC Bus Voltage" Grid.Column="0" Grid.Row="3"/>
+            <TextBlock Text="{Binding BusVoltage}" Grid.Column="1" Grid.Row="3"/>
+            <TextBlock Text="Battery Voltage" Grid.Column="0" Grid.Row="4"/>
+            <TextBlock Text="{Binding BatteryVoltage}" Grid.Column="1" Grid.Row="4"/>
+            <TextBlock Text="Battery Charging Current" Grid.Column="0" Grid.Row="5"/>
+            <TextBlock Text="{Binding BatteryChargingCurrent}" Grid.Column="1" Grid.Row="5"/>
+            <TextBlock Text="Solar Input Current For Battery" Grid.Column="0" Grid.Row="6"/>
+            <TextBlock Text="{Binding SolarInputCurrentForBattery}" Grid.Column="1" Grid.Row="6"/>
+            <TextBlock Text="PV Voltage" Grid.Column="0" Grid.Row="7"/>
+            <TextBlock Text="{Binding PVVoltage}" Grid.Column="1" Grid.Row="7"/>
+            <TextBlock Text="Inverter Heatsink Temperature" Grid.Column="0" Grid.Row="8"/>
+            <TextBlock Text="{Binding InverterHeatSinkTemperature}" Grid.Column="1" Grid.Row="8"/>
+        </Grid>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom" Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="2">
             <TextBlock Text="{Binding CommandResponse}" Foreground="Red" />
         </StackPanel>

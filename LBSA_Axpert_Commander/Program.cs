@@ -20,19 +20,21 @@ namespace TestApp
         {
             try
             {
-                Process[] battaryProcess = Process.GetProcessesByName("BattaryMonitor");
-                if(battaryProcess.Length >= 1)
-                {
-                    battaryProcess[0].Kill();
-                }
                 engine = new Engine();
-
-                _proccessid = engine.StartProcess($"{Directory.GetCurrentDirectory()}\\BattaryMonitor.exe");
+                Process[] battaryProcess = Process.GetProcessesByName("BattaryMonitor");
+                if (battaryProcess.Length >= 1)
+                {
+                    _proccessid = battaryProcess[0].Id;
+                }
+                else
+                {
+                    _proccessid = engine.StartProcess($"{Directory.GetCurrentDirectory()}\\BattaryMonitor.exe");
+                }
                 UIDA_Window mainWindow = engine.GetTopLevelByProcId(_proccessid, "Battery Monitor V2.1.8");
                 foreach (var button in mainWindow.Buttons("Connect", searchDescendants: true))
                 {
-                    button.Invoke();
-                    button.WaitForInputIdle(1000);
+                    button.SimulateClick();
+                    button.WaitForInputIdle(500);
                 }
                 decimal soc = 0m;
                 decimal current = 0m;
@@ -100,7 +102,7 @@ namespace TestApp
                     Console.WriteLine($"Inverter AC Load: {ACLoad}");
                     Console.WriteLine($"Inverter PV Voltage: {PVVoltage}");
                     Console.WriteLine($"Inverter full response: {dataRaw}");
-                    if (soc < 20.5m && !UsingEskom && soc != 0)
+                    if (soc < 25m && !UsingEskom && soc != 0)
                     {
                         UsingEskom = true;
                         InverterComander.ChangeToSolarUtilityBattery("COM1");
@@ -120,6 +122,13 @@ namespace TestApp
                             writer.WriteLine($"Back to Battery {DateTime.Now} \n");
                         }
                     }
+                }
+
+            }catch (Exception ex)
+            {
+                using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Errorlog.txt"))
+                {
+                    writer.WriteLine($"{ex}");
                 }
             }
             finally

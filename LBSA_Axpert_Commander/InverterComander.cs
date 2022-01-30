@@ -41,7 +41,6 @@ namespace InverterControlLibrary
             }
             finally
             {
-                ComPort.Close();
                 _gotResponse = false;
             }
         }
@@ -69,7 +68,6 @@ namespace InverterControlLibrary
             }
             finally
             {
-                ComPort.Close();
                 _gotResponse = false;
             }
         }
@@ -90,7 +88,6 @@ namespace InverterControlLibrary
             }
             finally
             {
-                ComPort.Close();
                 _gotResponse = false;
             }
         }
@@ -164,6 +161,10 @@ namespace InverterControlLibrary
             catch (Exception x)
             {
                 error = x.ToString();
+                using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Errorlog.txt"))
+                {
+                    writer.WriteLine($"{error}");
+                }
                 return false;
             }
             return true;

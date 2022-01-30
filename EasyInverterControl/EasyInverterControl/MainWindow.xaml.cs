@@ -27,13 +27,19 @@ namespace EasyInverterControl
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         public CancellationTokenSource PVChartCancellation { get; set; }
-        public Visibility PVWattageChartVisible { get; set; } = Visibility.Visible;
+        public InverterStat Stats { get; set; }
+        public Visibility PVWattageChartVisible { get; set; } = Visibility.Collapsed;
         public ObservableCollection<PVWattage> PVWattages { get; } = new ObservableCollection<PVWattage>();
+
+        public decimal HighestPVWattage { get; set; } = 0;
+
         public MainWindow()
         {
             InitializeComponent();
             this.DataContext = this;
             InverterCommander = new InverterComander();
+            comport.ItemsSource = SerialPort.GetPortNames();
+            comport.SelectedItem = SerialPort.GetPortNames()[0];
         }
 
         private InverterComander InverterCommander { get; }
@@ -56,7 +62,7 @@ namespace EasyInverterControl
         {
             InverterResponse = "";
             OnPropertyChanged(nameof(InverterResponse));
-            if (InverterCommander.TryGetInverterStats(comport.Text, out var inverterStat, out string stats, out string error))
+            if (InverterCommander.TryGetInverterStats(comport.Text, out var Stats, out string stats, out string error))
             {
                 MessageBox.Show(stats);
                 InverterResponse = stats;
@@ -68,6 +74,38 @@ namespace EasyInverterControl
                 CommandResponse = error;
                 OnPropertyChanged(nameof(CommandResponse));
             }
+            GetStatsWorker(comport.Text);
+        }
+
+        private Task GetStatsWorker(string comport)
+        {
+            return Task.Factory.StartNew(() =>
+            {
+                var comander = new InverterComander();
+                while (true)
+                {
+                    OnPropertyChanged(nameof(InverterResponse));
+                    if (comander.TryGetInverterStats(comport, out var statsobject, out string stats, out string error))
+                    {
+                        InverterResponse = stats;
+                        Stats = statsobject;
+                        if(Stats.PVWattage > HighestPVWattage)
+                        {
+                            HighestPVWattage = Stats.PVWattage;
+                            OnPropertyChanged(nameof(HighestPVWattage));
+                        }
+                        OnPropertyChanged(nameof(Stats));
+                        OnPropertyChanged(nameof(InverterResponse));
+                    }
+                    else
+                    {
+                        CommandResponse = error;
+                        OnPropertyChanged(nameof(CommandResponse));
+                    }
+                    OnPropertyChanged(nameof(InverterResponse));
+                    Thread.Sleep(1000);
+                }
+            });
         }
 
         private void ChangeToGrid_Click(object sender, RoutedEventArgs e)
@@ -85,6 +123,7 @@ namespace EasyInverterControl
         private void CheckBox_Checked(object sender, RoutedEventArgs e)
         {
             PVChartCancellation = new CancellationTokenSource();
+            PVWattageChartVisible = Visibility.Visible;
             CancellationToken token = PVChartCancellation.Token;
             _ = Task.Run(() =>
             {
