@@ -60,20 +60,6 @@ namespace EasyInverterControl
 
         private void GetStats_Click(object sender, RoutedEventArgs e)
         {
-            InverterResponse = "";
-            OnPropertyChanged(nameof(InverterResponse));
-            if (InverterCommander.TryGetInverterStats(comport.Text, out var Stats, out string stats, out string error))
-            {
-                MessageBox.Show(stats);
-                InverterResponse = stats;
-                OnPropertyChanged(nameof(InverterResponse));
-            }
-            else
-            {
-                MessageBox.Show(error);
-                CommandResponse = error;
-                OnPropertyChanged(nameof(CommandResponse));
-            }
             GetStatsWorker(comport.Text);
         }
 
@@ -87,7 +73,7 @@ namespace EasyInverterControl
                     OnPropertyChanged(nameof(InverterResponse));
                     if (comander.TryGetInverterStats(comport, out var statsobject, out string stats, out string error))
                     {
-                        InverterResponse = stats;
+                        
                         Stats = statsobject;
                         if(Stats.PVWattage > HighestPVWattage)
                         {
