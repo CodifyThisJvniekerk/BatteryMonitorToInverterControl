@@ -146,5 +146,19 @@ namespace EasyInverterControl
         {
             PVChartCancellation.Cancel();
         }
+
+        private void GetCurrentMode_Click(object sender, RoutedEventArgs e)
+        {
+            InverterResponse = InverterCommander.GetCurrentOperatingMode(comport.Text);
+            if(InverterResponse == "L" || InverterResponse == "Y")
+            {
+                InverterResponse = "Using Utility";
+            }
+            else
+            {
+                InverterResponse = "Solar Battery";
+            }
+            OnPropertyChanged(nameof(InverterResponse));
+        }
     }
 }

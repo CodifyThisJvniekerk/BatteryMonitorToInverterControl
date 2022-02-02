@@ -15,27 +15,17 @@ namespace TestApp
         static int _proccessid;
         static Engine engine;
         static InverterControlLibrary.InverterComander InverterComander = new InverterControlLibrary.InverterComander();
-        
+        static bool usingEskom;
+
         public static void Main(string[] args)
         {
             try
             {
                 engine = new Engine();
-                Process[] battaryProcess = Process.GetProcessesByName("BattaryMonitor");
-                if (battaryProcess.Length >= 1)
-                {
-                    _proccessid = battaryProcess[0].Id;
-                }
-                else
-                {
-                    _proccessid = engine.StartProcess($"{Directory.GetCurrentDirectory()}\\BattaryMonitor.exe");
-                }
-                UIDA_Window mainWindow = engine.GetTopLevelByProcId(_proccessid, "Battery Monitor V2.1.8");
-                foreach (var button in mainWindow.Buttons("Connect", searchDescendants: true))
-                {
-                    button.SimulateClick();
-                    button.WaitForInputIdle(500);
-                }
+                UIDA_Window mainWindow;
+                GetBatteryProcessID(out _proccessid);
+                ClickConnectButtonAndAwaitIdle(out mainWindow);
+                RetrieveInverterOpperatingMode();
                 decimal soc = 0m;
                 decimal current = 0m;
                 string state = "";
@@ -65,25 +55,6 @@ namespace TestApp
                           }
                       }
                   });
-                decimal PVVoltage = 0;
-                decimal PVWatage = 0;
-                decimal ACLoad = 0;
-                string dataRaw = string.Empty;
-                _ = Task.Factory.StartNew(() =>
-                {
-                    while (true)
-                    {
-                        Thread.Sleep(1000);
-                        if(InverterComander.TryGetInverterStats("COM1", out var inverterStat, out string stats, out string error))
-                        {
-                            PVVoltage = inverterStat.PVVoltage;
-                            PVWatage = inverterStat.PVWattage;
-                            ACLoad = inverterStat.OutputActivePower;
-                            dataRaw = stats;
-                        }
-                    }
-                });
-                bool UsingEskom = false;
                 int loopcounter = 0;
                 Thread.Sleep(2000);
                 while (true)
@@ -94,33 +65,50 @@ namespace TestApp
                         loopcounter = 0;
                     }
                     ++loopcounter;
-                    Thread.Sleep(3000);
+                    Thread.Sleep(10000);
                     Console.WriteLine($"SOC : {soc}%");
                     Console.WriteLine($"Current : {current}A");
                     Console.WriteLine($"Status : {state}");
-                    Console.WriteLine($"Inverter PV Input Wattage: {PVWatage}");
-                    Console.WriteLine($"Inverter AC Load: {ACLoad}");
-                    Console.WriteLine($"Inverter PV Voltage: {PVVoltage}");
-                    Console.WriteLine($"Inverter full response: {dataRaw}");
-                    if (soc < 25m && !UsingEskom && soc != 0)
+                    if (soc < 25m && !IsUsingEskom() && soc != 0)
                     {
-                        UsingEskom = true;
-                        InverterComander.ChangeToSolarUtilityBattery("COM1");
-                        Console.WriteLine($"Back to Grid at {DateTime.Now}");
-                        using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt"))
+                        var response = InverterComander.ChangeToSolarUtilityBattery("COM1");
+                        RetrieveInverterOpperatingMode();
+                        if (IsUsingEskom())
                         {
-                            writer.WriteLine($"Back to Grid at { DateTime.Now} \n");
+                            Console.WriteLine($"Back to Grid at {DateTime.Now}");
+                            using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt"))
+                            {
+                                writer.WriteLine($"Back to Grid at { DateTime.Now} {response} \n");
+                            }
                         }
+                        else
+                        {
+                            using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt"))
+                            {
+                                writer.WriteLine($"Attempt Back to Grid Failed at { DateTime.Now} {response} \n");
+                            }
+                        }
+                        
                     }
-                    else if (soc > 35 && UsingEskom && soc != 0)
+                    else if (soc > 35 && !IsUsingEskom() && soc != 0)
                     {
-                        UsingEskom = false;
-                        InverterComander.ChangeToSolarBatteryUtility("COM1");
-                        Console.WriteLine($"Back to Battery at {DateTime.Now}");
-                        using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt"))
+                        var response = InverterComander.ChangeToSolarBatteryUtility("COM1");
+                        RetrieveInverterOpperatingMode();
+                        if (!IsUsingEskom())
                         {
-                            writer.WriteLine($"Back to Battery {DateTime.Now} \n");
+                            Console.WriteLine($"Back to Battery at {DateTime.Now}");
+                            using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt"))
+                            {
+                                writer.WriteLine($"Back to Battery {DateTime.Now} {response} \n");
+                            }
                         }
+                        else
+                        {
+                            using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Commanderlog.txt"))
+                            {
+                                writer.WriteLine($"Attempt Back to Battery Failed at { DateTime.Now} {response} \n");
+                            }
+                        }    
                     }
                 }
 
@@ -133,6 +121,58 @@ namespace TestApp
             }
             finally
             {
+            }
+        }
+
+        private static void RetrieveInverterOpperatingMode()
+        {
+            var result = InverterComander.GetCurrentOperatingMode("COM1");
+            if (result == "Y" || result == "L")
+            {
+                usingEskom = true;
+            }
+            else
+            {
+                usingEskom = false;
+            }
+        }
+
+        private static bool IsUsingEskom()
+        {
+            return usingEskom;
+        }
+
+        private static void ClickConnectButtonAndAwaitIdle(out UIDA_Window mainWindow)
+        {
+            mainWindow = engine.GetTopLevelByProcId(_proccessid, "Battery Monitor V2.1.8");
+            foreach (var button in mainWindow.Buttons("Connect", searchDescendants: true))
+            {
+                button.SimulateClick();
+                button.WaitForInputIdle(500);
+            }
+        }
+
+        private static void GetBatteryProcessID(out int _proccessid)
+        {
+            try
+            {
+                Process[] battaryProcess = Process.GetProcessesByName("BattaryMonitor");
+                if (battaryProcess.Length >= 1)
+                {
+                    _proccessid = battaryProcess[0].Id;
+                }
+                else
+                {
+                    _proccessid = engine.StartProcess($"{Directory.GetCurrentDirectory()}\\BattaryMonitor.exe");
+                }
+            }
+            catch (Exception ex)
+            {
+                using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Errorlog.txt"))
+                {
+                    writer.WriteLine($"{ex}");
+                }
+                _proccessid = -1;
             }
         }
     }
