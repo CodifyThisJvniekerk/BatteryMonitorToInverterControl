@@ -38,8 +38,12 @@ namespace EasyInverterControl
             InitializeComponent();
             this.DataContext = this;
             InverterCommander = new InverterComander();
-            comport.ItemsSource = SerialPort.GetPortNames();
-            comport.SelectedItem = SerialPort.GetPortNames()[0];
+            var comports = SerialPort.GetPortNames();
+            comport.ItemsSource = comports;
+            if (comports.Length > 0)
+            {
+                comport.SelectedItem = SerialPort.GetPortNames()[0];
+            }
         }
 
         private InverterComander InverterCommander { get; }
