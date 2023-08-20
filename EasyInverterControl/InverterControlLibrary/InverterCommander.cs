@@ -92,6 +92,27 @@ namespace InverterControlLibrary
             }
         }
 
+        public string GetCurrentOperatingMode(string portName)
+        {
+            try
+            {
+                if (TryInnitialize(portName, out var Successindicator, out string error))
+                {
+                    ExecuteInverterCommand("QMOD");
+                    if (TryGetResponse(out var data, out string responseerror))
+                    {
+                        return data.Replace("(","");
+                    }
+                }
+                return Successindicator;
+            }
+            finally
+            {
+                ComPort.Close();
+                _gotResponse = false;
+            }
+        }
+
         private bool TryGetResponse(out string result, out string error)
         {
             result = string.Empty;

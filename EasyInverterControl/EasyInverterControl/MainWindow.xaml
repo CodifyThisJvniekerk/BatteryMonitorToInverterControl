@@ -6,7 +6,7 @@
         xmlns:dv="clr-namespace:System.Windows.Controls.DataVisualization.Charting;assembly=DotNetProjects.DataVisualization.Toolkit"
         xmlns:local="clr-namespace:EasyInverterControl"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="350" Width="800">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="20" />
@@ -14,7 +14,7 @@
             <RowDefinition Height="20" />
             <RowDefinition Height="20" />
             <RowDefinition Height="20" />
-            <RowDefinition Height="20"/>
+            <RowDefinition Height="20" />
             <RowDefinition />
             <RowDefinition Height="20" />
         </Grid.RowDefinitions>
@@ -24,10 +24,11 @@
         </Grid.ColumnDefinitions>
         <TextBlock Text="Com Port" Grid.Row="0" Grid.Column="0"/>
         <ComboBox Name="comport" Grid.Row="0" Grid.Column="1"/>
-        <Button x:Name="GetStats" Grid.Row="1" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="GetStats_Click" Content="Get Inverter Stats"/>
+        <Button x:Name="GetStats" Grid.Row="1" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="GetStats_Click" Content="Connect and start showing stats"/>
         <TextBlock x:Name="Test" Text="{Binding InverterResponse}" Grid.Column="1" Grid.Row="1" Foreground="Green"/>
         <Button x:Name="ChangeToGrid" Grid.Row="2" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="ChangeToGrid_Click"  Content="Back to Grid"/>
         <Button x:Name="ChangeToSolarBattery" Grid.Row="3" Grid.Column="0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="ChangeToSolarBatteryUtility_Click" Content="Back To Solar"/>
+        <Button x:Name="GetCurrentMode" Grid.Row="3" Grid.Column="1" VerticalAlignment="Top" HorizontalContentAlignment="Center" Click="GetCurrentMode_Click" Content="Get Current Opperating Mode"/>
         <CheckBox x:Name="cbShowWattageGraph" Checked="CheckBox_Checked" Unchecked="cbShowWattageGraph_Unchecked" Content="Show live PV Watage chart" Grid.Row="4"/>
         <dv:Chart x:Name="Wattage" Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Visibility="{Binding PVWattageChartVisible}">
             <dv:Chart.Series>

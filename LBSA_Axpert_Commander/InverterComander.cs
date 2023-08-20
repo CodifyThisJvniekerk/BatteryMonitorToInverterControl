@@ -92,6 +92,26 @@ namespace InverterControlLibrary
             }
         }
 
+        public string GetCurrentOperatingMode(string portName)
+        {
+            try
+            {
+                if (TryInnitialize(portName, out var Successindicator, out string error))
+                {
+                    ExecuteInverterCommand("QMOD");
+                    if (TryGetResponse(out var data, out string responseerror))
+                    {
+                        return data.Replace("(", "");
+                    }
+                }
+                return Successindicator;
+            }
+            finally
+            {
+                ComPort.Close();
+                _gotResponse = false;
+            }
+        }
         private bool TryGetResponse(out string result, out string error)
         {
             result = string.Empty;
@@ -116,6 +136,7 @@ namespace InverterControlLibrary
             }
             //Write response to console
             result = Encoding.ASCII.GetString(payloadBytes);
+            ClearMemoryStream();
             return true;
         }
 
@@ -176,18 +197,27 @@ namespace InverterControlLibrary
 
         private void ExecuteAndAwaitInverterResponse(byte[] commandBytes)
         {
-            ClearMemoryStream();
-            //Flush out any existing chars
-            ComPort.ReadExisting();
-
-            //Send request
-            ComPort.Write(commandBytes, 0, commandBytes.Length);
-
-            //Wait for response
-            var startTime = DateTime.Now;
-            while (!_gotResponse && ((DateTime.Now - startTime).TotalMilliseconds < 1000))
+            try
             {
-                Thread.Sleep(20);
+                //Flush out any existing chars
+                ComPort.ReadExisting();
+
+                //Send request
+                ComPort.Write(commandBytes, 0, commandBytes.Length);
+
+                //Wait for response
+                var startTime = DateTime.Now;
+                while (!_gotResponse && ((DateTime.Now - startTime).TotalMilliseconds < 1000))
+                {
+                    Thread.Sleep(20);
+                }
+            }catch (Exception x)
+            {
+                string error = x.ToString();
+                using (var writer = File.AppendText($"{Directory.GetCurrentDirectory()}\\Errorlog.txt"))
+                {
+                    writer.WriteLine($"{error}");
+                }
             }
         }
 
